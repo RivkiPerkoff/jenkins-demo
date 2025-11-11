@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "my-web-app"
         DOCKER_TAG = "${BUILD_NUMBER}"
+        PORT = "8081"
     }
     
     stages {
@@ -24,21 +25,15 @@ pipeline {
             }
         }
         
-        stage('Test Image') {
-            steps {
-                echo 'Testing Docker image...'
-                sh "docker images | grep ${DOCKER_IMAGE}"
-            }
-        }
-        
         stage('Run Container') {
             steps {
                 echo 'Running container for testing...'
                 sh """
+                    # אם קונטיינר קיים – עצור והסר
                     docker rm -f test-container 2>/dev/null || true
-                    docker run -d --name test-container -p 8081:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker run -d --name test-container -p ${PORT}:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
                     sleep 3
-                    curl -f http://localhost:8081 || exit 1
+                    curl -f http://localhost:${PORT} || exit 1
                     echo "Container is running successfully!"
                 """
             }
@@ -48,8 +43,8 @@ pipeline {
             steps {
                 echo 'Cleaning up test container...'
                 sh """
-                    docker stop test-container || true
-                    docker rm test-container || true
+                    docker stop test-container 2>/dev/null || true
+                    docker rm test-container 2>/dev/null || true
                 """
             }
         }
